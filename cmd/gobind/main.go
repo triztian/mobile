@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
-	"go/importer"
 	"go/parser"
 	"go/types"
 	"io/ioutil"
@@ -130,7 +129,6 @@ func run() {
 			}
 		}
 	}
-
 	typePkgs := make([]*types.Package, len(allPkg))
 	astPkgs := make([][]*ast.File, len(allPkg))
 	// The "source" go/importer package implicitly uses build.Default.
@@ -139,17 +137,19 @@ func run() {
 	defer func() {
 		build.Default = oldCtx
 	}()
-	imp := importer.For("source", nil)
+
+	imp := &mmcImporter{Ctx: ctx}
 	for i, pkg := range allPkg {
 		var err error
 		typePkgs[i], err = imp.Import(pkg.ImportPath)
 		if err != nil {
-			errorf("%v\n", err)
+			errorf("import: %v (%v) \n", err, pkg.ImportPath)
 			return
 		}
+
 		astPkgs[i], err = parse(pkg)
 		if err != nil {
-			errorf("%v\n", err)
+			errorf("parse: %v\n", err)
 			return
 		}
 	}
